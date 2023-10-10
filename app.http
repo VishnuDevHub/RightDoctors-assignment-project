@@ -1,0 +1,49 @@
+###
+
+POST http://localhost:3000/register/
+Content-Type: application/json
+
+{
+  "username": "Tharun@24",
+  "name": "Tharun Sapare",
+  "password": "1234567",
+  "gender": "male",
+  "location": "A.P"
+}
+
+###
+
+POST http://localhost:3000/login/
+Content-Type: application/json
+
+{
+  "username": "adam_richard",
+  "password": "richard_567"
+}
+
+###
+
+PUT http://localhost:3000/change-password/
+Content-Type: application/json
+
+{
+  "username": "adam_richard",
+  "oldPassword": "richard@123",
+  "newPassword": "richard_567"
+}
+
+###
+
+DELETE http://localhost:3000/delete/
+Content-Type: application/json
+
+{
+    "username":"cliffordhayes" 
+}
+
+###
+
+GET http://localhost:3000/
+
+
+###

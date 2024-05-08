@@ -3,6 +3,7 @@ const path = require("path");
 const { open } = require("sqlite");
 const sqlite3 = require("sqlite3");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,28 @@ const initializeDBAndServer = async () => {
 };
 
 initializeDBAndServer();
+
+const authenticateToken = (request, response, next) => {
+  const authHeader = request.headers["authorization"];
+  let jwtToken;
+  if (authHeader !== undefined) {
+    jwtToken = authHeader.split(" ")[1];
+  }
+  if (jwtToken === undefined) {
+    response.status(401);
+    response.send("Invalid Access Token");
+  } else {
+    jwt.verify(jwtToken, "MY_SECRET_TOKEN_JVV", async (error, payload) => {
+      if (error) {
+        response.status(401);
+        response.send("Invalid Access Token");
+      } else {
+        request.username = payload.username;
+        next();
+      }
+    });
+  }
+};
 
 // Register A New User API
 
@@ -73,7 +96,11 @@ app.post("/login/", async (request, response) => {
       getSelectUserDetails.password
     );
     if (isPasswordMatched === true) {
-      response.send("Login success!");
+      const payload = {
+        username: username,
+      };
+      const jwtToken = jwt.sign(payload, "MY_SECRET_TOKEN_JVV");
+      response.send({ jwtToken });
     } else {
       response.status(400);
       response.send("Invalid password");
@@ -81,9 +108,22 @@ app.post("/login/", async (request, response) => {
   }
 });
 
+// Retrieve User Details
+
+app.get("/profile/", authenticateToken, async (request, response) => {
+  const username = request.username;
+  const profileDetailsQuery = `
+        SELECT *
+        FROM user
+        WHERE username='${username}';
+    `;
+  const dbUser = await db.get(profileDetailsQuery);
+  response.send(dbUser);
+});
+
 // Update Password API
 
-app.put("/change-password/", async (request, response) => {
+app.put("/change-password/", authenticateToken, async (request, response) => {
   const { username, oldPassword, newPassword } = request.body;
   const selectUserQuery = `
     SELECT * FROM user WHERE username = '${username}';
@@ -117,7 +157,7 @@ app.put("/change-password/", async (request, response) => {
 
 // Delete a User
 
-app.delete("/delete/", async (request, response) => {
+app.delete("/delete/", authenticateToken, async (request, response) => {
   const { username } = request.body;
   const deleteQuery = `
         DELETE FROM user WHERE username = '${username}';
@@ -128,10 +168,10 @@ app.delete("/delete/", async (request, response) => {
 
 // Get All Users Data
 
-app.get("/", async (request, response) => {
+app.get("/", authenticateToken, async (request, response) => {
   const selectUsersQueryAll = `
-        SELECT * FROM user;
-    `;
+          SELECT * FROM user;
+      `;
   const responseData = await db.all(selectUsersQueryAll);
   response.send(responseData);
 });
